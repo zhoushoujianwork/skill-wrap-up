@@ -14,22 +14,50 @@ git push
 ```
 
 ### version-release
-根据项目发布方式选择执行路径：
+
+#### 1. 推断版本规则
+
+先读取远端已有 tag，推断项目的版本号规范：
+
+```bash
+git fetch --tags
+git tag -l | sort -V | tail -20
+```
+
+| 检测到的 tag 格式 | 推断规则 |
+|-----------------|---------|
+| `v0.x.y`（如 v0.13.0） | minor=新功能，patch=修复，v1.0.0=首个稳定版 |
+| `v1.x.y` / `v2.x.y` | 标准 semver：major.minor.patch |
+| `x.y.z`（无 v 前缀） | 同 semver，不加 v 前缀 |
+| `vYYYY.MM.DD` | 日期版本，递增日期或加 `.N` 后缀 |
+| 无 tag | 使用标准方案（见下方） |
+
+根据本次变更类型建议下一个版本号：
+- 新功能（feat）→ minor +1，patch 归零
+- Bug 修复（fix/perf）→ patch +1
+- 破坏性变更（BREAKING CHANGE）→ major +1
+
+**无 tag 时的标准方案**：从 `v0.1.0` 开始，遵循 `v0.x.y` 规则。
+
+#### 2. 执行路径
+
+根据项目发布方式选择：
 
 | 发布方式 | 执行步骤 |
 |---------|---------|
 | `github-actions` | `git tag -a vX.Y.Z -m "<message>"` → `git push origin vX.Y.Z` |
-| `goreleaser` | `git tag vX.Y.Z` → `git push origin vX.Y.Z`（goreleaser 自动触发） |
+| `goreleaser` | `git tag vX.Y.Z` → `git push origin vX.Y.Z` |
 | `makefile` | `make release VERSION=X.Y.Z` 或 `make tag VERSION=X.Y.Z` |
 | `npm` | `npm version patch/minor/major` → `npm publish` |
 | `cargo` | `cargo publish` |
 | `pypi` | `python -m build` → `twine upload dist/*` |
 | `manual` | 提示用户手动操作，说明步骤 |
 
-执行前检查：
+#### 3. 执行前检查
+
 - 当前分支是否为主分支（main/master）
 - 是否有未提交的变更（应先执行 git-commit-push）
-- 询问版本号（参考 `git describe --tags --abbrev=0` 的当前版本）
+- 展示推断的版本号，让用户确认或修改
 
 ### update-changelog
 ```bash
